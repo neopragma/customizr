@@ -1,0 +1,24 @@
+#!/bin/bash
+
+function confirm {
+  dialog --title 'Please confirm' \
+    --backtitle 'Confirmation' \
+    --yesno "$1" 7 60
+  entry=$?
+  case $entry in 
+    0)   _entry='Yes' ;;
+    1)   _entry='No' ;;
+    255) _entry='ESC' ;;
+    *)   _entry='bad input' ;;
+  esac
+}
+
+confirm "the first thing"
+_first="$_entry"
+
+confirm "the second thing"
+_second="$_entry"
+
+printf "Results: \n  _first=${_first}\n  _second=${_second}\n"
+
+exit 0

@@ -1,0 +1,173 @@
+#!/bin/bash
+
+# Microtests for customizr
+# Using http://github.com/neopragma/bash-spec
+
+. ./bash_spec
+. ./customizr_functions
+
+initialize
+
+# confirmation dialog behavior
+
+function confirm_returns_yes_when_selected { 
+  it "returns Yes when selected in yesno" 
+  confirm_entry 0
+  expect $_entry to_be Yes
+}
+
+function confirm_returns_no_when_selected { 
+  it "returns No when selected in yesno" 
+  confirm_entry 1
+  expect $_entry to_be No
+}
+
+function confirm_returns_ESC_when_pressed { 
+  it "returns ESC when pressed in yesno" 
+  confirm_entry 255
+  expect $_entry to_be ESC
+}
+
+# single value user input behavior
+
+function mock_prompt_for_input_value {
+  echo "$_mock_entry" > "$tmpfile"
+  return 0
+}
+
+function input_value_provided {
+  it 'collects the value entered by the user'
+  _mock_entry='testvalue'
+  accept_input_value 'title' 'backtitle' 'prompt' 'mock_prompt_for_input_value' 'testvalue'
+  expect $_entry to_be testvalue
+}
+
+function mock_cancel_input { 
+  echo '' > "$tmpfile" 
+  return 1
+}
+
+function user_cancels_inputbox {
+  it 'sets empty string when user cancels inputbox'
+  _mock_entry='' 
+  accept_input_value 'title' 'backtitle' 'prompt' 'mock_cancel_input' ''
+  expect $_entry to_be_empty
+}
+
+function mock_escape_input { 
+  echo '' > "$tmpfile"
+  return 255
+}
+
+function user_escapes_inputbox { 
+  it 'sets empty string when user escapes inputbox' 
+  _mock_entry='' 
+  accept_input_value 'title' 'backtitle' 'prompt' 'mock_escape_input' '' 
+  expect $_entry to_be_empty 
+}
+
+# passwordbox behavior
+
+function mock_prompt_for_password_value {
+  echo "$_mock_entry" > "tmpfile"
+  return 0
+}
+
+function password_value_provided {
+  it 'collects the password entered by the user'
+  _mock_entry='password123'
+  accept_password_value 'title' 'backtitle' 'prompt' 'mock_prompt_for_password_value' 'password123'
+  expect $_entry to_be password123
+}
+
+function mock_cancel_password { 
+  echo '' > "tmpfile" 
+  return 1
+}
+
+function user_cancels_passwordbox {
+  it 'sets empty string when user cancels passwordbox'
+  _mock_entry='' 
+  accept_input_value 'title' 'backtitle' 'prompt' 'mock_cancel_password' ''
+  expect $_entry to_be_empty
+}
+
+function mock_escape_password { 
+  echo '' > "tmpfile"
+  return 255
+}
+
+function user_escapes_passwordbox { 
+  it 'sets empty string when user escapes passwordbox' 
+  _mock_entry='' 
+  accept_input_value 'title' 'backtitle' 'prompt' 'mock_escape_password' '' 
+  expect $_entry to_be_empty 
+}
+
+# menu behavior
+
+function mock_menu_selection {
+  echo 'Two' > "tmpfile"
+  return 0
+}
+
+function user_makes_selection_from_menu { 
+  it 'captures selected menu option' 
+  _mock_entry='Two'
+  accept_menu_selection 'title' 'backtitle' 'prompt' 10 40 3 One 'first' Two 'second' Three 'third' 'mock_menu_selection'
+  expect $_entry to_be Two
+}
+
+# check groups
+
+function confirmation_checks {
+  printf "\nconfirmation (yesno) checks\n"
+  confirm_returns_yes_when_selected
+  confirm_returns_no_when_selected
+  confirm_returns_ESC_when_pressed
+}
+
+function inputbox_checks {
+  printf "\ninputbox checks\n"
+  input_value_provided
+  user_cancels_inputbox
+  user_escapes_inputbox
+}
+
+function password_checks {
+  printf "\npassword (passwordbox) checks\n"
+  password_value_provided
+  user_cancels_passwordbox
+  user_escapes_passwordbox
+}
+
+function menu_checks {
+  user_makes_selection_from_menu
+}
+
+function all { 
+  confirmation_checks 
+  inputbox_checks
+  password_checks
+  menu_checks
+}
+
+# emit report
+
+print_header "customizr"
+
+if [[ "$#" -gt 0 ]] 
+then
+  for check in "$@"
+  do 
+    "$1" 
+    shift
+  done
+else 
+  all 
+fi
+
+print_trailer
+
+
+exit 0

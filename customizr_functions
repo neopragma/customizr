@@ -1,0 +1,118 @@
+#!/bin/bash
+# source this in customizr
+
+function initialize {
+  $(mkdir -p "$HOME/tmp")
+  tmpfile="$HOME/tmp/tmpfile"
+  >"$tmpfile"
+}
+
+# confirmation dialog (yesno)
+
+function confirm_entry {
+  case $1 in 
+    0)   _entry='Yes' ;;
+    1)   _entry='No' ;;
+    255) _entry='ESC' ;;
+    *)   _entry='bad input' ;;
+  esac
+}
+
+function confirm {
+  dialog --title 'Please confirm' \
+    --backtitle 'Confirmation' \
+    --yesno "$1" 7 60
+  confirm_entry $?
+}
+
+# prompt for a single input value (inputbox)
+
+# $1 title
+# $2 backtitle
+# $3 prompt for inputbox
+# $4 override prompt_for_input_Value (for mocking)
+function accept_input_value {
+  _func='prompt_for_input_value'
+  [[ ! -z $4 ]] && _func="$4"
+  "$_func" "$@"
+  _response=$?
+  case $_response in
+    0) _entry=$(<"$tmpfile") ;;
+    1) _entry=' ' ;;
+    255) _entry=' ' ;;
+  esac
+}
+
+function prompt_for_input_value {
+  dialog --title "$1" --backtitle "$2" --inputbox "$3" 8 60 2>$tmpfile
+}
+
+# prompt for a password value (passwordbox)
+
+# $1 title
+# $2 backtitle
+# $3 prompt for passwordbox
+# $4 override prompt_for_password_Value (for mocking)
+function accept_password_value {
+  _pw=$(tmpfile 2>/dev/null)
+  trap "rm -f $_pw" 0 1 2 5 15
+  _func='prompt_for_password_value'
+  [[ ! -z $4 ]] && _func="$4"
+  "$_func" "$@"
+  _response=$?
+  case $_response in
+    0) _entry="$(<tmpfile)" ;;
+    1) _entry=' ' ;;
+    255) _entry=' ' ;;
+  esac
+}
+
+function prompt_for_password_value {
+  dialog --title "$1" --backtitle "$2" --clear --passwordbox "$3" 8 60 2>$tmpfile
+}
+
+# display menu and accept user selection
+# $ title
+# $2 backtitle
+# $3 prompt for menu
+# $4 height
+# $5 width
+# $6 number of entries displayed at a time
+# $7 tag1
+# $8 option1
+# $9 tag2
+# $10 option 2
+# $11 (last) override prompt_for_menu_selection (for mocking)
+function accept_menu_selection {
+  for last; do true; done 
+  _func='prompt_for_menu_selection'
+  [[ ! -z $last ]] && [[ ${#last} -gt 0 ]] && _func="$last"
+  "$_func" "$@"
+  _response=$?
+  _entry=$(<"tmpfile")
+}
+
+function prompt_for_menu_selection {
+  echo '' > menufile
+  chmod +x menufile
+  trap "rm -f menufile" 0 1 2 5 15
+  printf 'dialog --clear '    > menufile 
+  printf '  --help-button '    >> menufile
+  printf "  --title \"$1\" "      >> menufile
+  printf "  --backtitle \"$2\" " >> menufile
+  printf "  --menu \"$3\" "      >> menufile
+  printf "  $4 $5 $6 "       >> menufile
+  shift 5
+  _limit="$1"
+  shift
+  for ((n=0;n<"$_limit";n++))
+  do
+    printf "$1 \"$2\" " >> menufile 
+    shift 2
+  done
+  echo ' 2>tmpfile' >> menufile
+  cat menufile
+  ./menufile
+  _response=$?
+  _entry=$(<tmpfile)
+}
